@@ -20,7 +20,6 @@ class APIClient
      */
     public $error = '';
 
-    const MAX_IMAGE_SIZE_KB = 1024;
     const MAX_FILENAME_LENGTH = 100;
 
     /**
@@ -199,12 +198,7 @@ class APIClient
 
     public function loadImage($url, $filename = '')
     {
-        $settings = $this->plugin->getSettings();
-
         $args = [
-            'headers' => [
-                'API-Auth' => $settings['api_key']
-            ],
             'timeout' => $this->http_timeout,
             'sslverify' => $this->ssl_verify,
         ];
@@ -216,6 +210,9 @@ class APIClient
             return false;
         } elseif (wp_remote_retrieve_response_code($response) === 200) {
             $content_type = wp_remote_retrieve_header($response, 'content-type');
+            if (is_array($content_type)) {
+                $content_type = $content_type[0];
+            }
             $size = wp_remote_retrieve_header($response, 'content-length');
             if (is_array($size)) {
                 $size = $size[0];
@@ -223,7 +220,7 @@ class APIClient
             $size = (int)$size;
             $mimes = get_allowed_mime_types();
 
-            if (($size > 0) && ($size <= (self::MAX_IMAGE_SIZE_KB * 1024)) && in_array($content_type, $mimes)) {
+            if ($size > 0 && in_array($content_type, $mimes)) {
                 $tmp_name = wp_tempnam();
                 if (@file_put_contents($tmp_name, wp_remote_retrieve_body($response))) {
                     $image_size = @getimagesize($tmp_name);
@@ -234,7 +231,7 @@ class APIClient
                             $filename = trim($filename, " \n\r\t.?!;:/\\#");
 
                             if (strlen($filename) > 0) {
-                                $ext = substr($name, (int)strrpos($name, '.'));
+                                $ext = "." . explode("/", $content_type)[1];
                                 $max_length = self::MAX_FILENAME_LENGTH - strlen($ext);
 
                                 if (mb_strlen($filename, \SEOWriting::MB_ENCODING) > $max_length) {
@@ -253,7 +250,7 @@ class APIClient
 
                         return [
                             'name' => sanitize_file_name($name),
-                            'type' => $image_size['mime'],
+                            'type' => $content_type,
                             'tmp_name' => $tmp_name,
                             'error' => UPLOAD_ERR_OK,
                             'size' => $size
@@ -263,6 +260,8 @@ class APIClient
                     $this->error = 'file_put_contents(' . $tmp_name . ') ' . $size . ' bytes';
                 }
                 @unlink($tmp_name);
+            } else {
+                $this->error = 'unknown_type='.$content_type;
             }
         } else {
             $this->error = 'response_code=' . wp_remote_retrieve_response_code($response);
