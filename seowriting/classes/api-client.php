@@ -13,7 +13,6 @@ class APIClient
      */
     private $plugin;
     private $base_url = 'https://seowriting.ai/api/v1/';
-    private $site_url;
     private $ssl_verify = false;
     private $http_timeout = 120;
     /**
@@ -30,7 +29,6 @@ class APIClient
     public function __construct($plugin)
     {
         $this->plugin = $plugin;
-        $this->site_url = substr($this->base_url, 0, (int)strpos($this->base_url, '/api/v1/'));
     }
 
     private function getSign($data, $secret)
@@ -197,14 +195,6 @@ class APIClient
             'status' => 0,
             'error' => $this->error,
         ];
-    }
-
-    public function checkImageUrl($url)
-    {
-        if (strpos($url, $this->site_url) === 0) {
-            return preg_match('#^/docs/[0-9]+/[0-9a-z]+/[0-9]+/[0-9a-z]+\.(jpg|gif|png|webp)$#', substr($url, strlen($this->site_url)));
-        }
-        return false;
     }
 
     public function loadImage($url, $filename = '')
