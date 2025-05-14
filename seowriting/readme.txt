@@ -4,7 +4,7 @@ Tags: seo writing, AI tool, AI writing, generation text
 Tested up to: 6.8.1
 Requires at least: 4.9
 Requires PHP: 5.6.20
-Stable tag: 1.11.9
+Stable tag: 1.11.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,15 +12,21 @@ AI writing assistant for creating SEO-optimized content with auto-publishing & s
 
 == Description ==
 
-[SEOWriting](https://seowriting.ai/?utm_source=wp_plugin "SEOWriting")'s AI-powered writing assistant is designed to create SEO-optimized content with images and relevant videos from YouTube in 1-Click and Bulk modes. SEOWriting provides auto-posting to WordPress websites, allowing users to publish & schedule their content directly from the platform.
+[SEO WRITING](https://seowriting.ai/?utm_source=wp_plugin "SEO WRITING") - an all-in-one solution for creating SEO-optimized content. Featuring Super Page, our super-agent that scans SERP top-ranking competitors to extract winning strategies and create complete, optimized pages with perfect structure, relevant images, optimal word count, and strategic CTAs in minutes.
 
-[youtube https://www.youtube.com/watch?v=Q10tXx2QE4E]
+[youtube https://www.youtube.com/watch?v=LyyZxMWGX8o]
 
-SEOWriting’s powerful plugin allows you to seamlessly publish titles, texts, images, meta titles, and meta descriptions on your WordPress website. The installation process is quick and easy, and you can find a step-by-step guide [here](https://docs.seowriting.ai/article/wordpress-integration?utm_source=wp_plugin "Plugin installation guide").
+SEO WRITING’s powerful plugin allows you to seamlessly publish titles, texts, images, meta titles, and meta descriptions on your WordPress website. The installation process is quick and easy, and you can find a step-by-step guide [here](https://docs.seowriting.ai/article/wordpress-integration?utm_source=wp_plugin "Plugin installation guide").
 
 The plugin uses the REST-API provided by [https://seowriting.ai/](https://seowriting.ai/?utm_source=wp_plugin). The Service is provided under the terms of [Terms of Service](https://seowriting.ai/terms-of-service?utm_source=wp_plugin) and [Privacy Policy](https://seowriting.ai/privacy-policy?utm_source=wp_plugin).
 
 == Changelog ==
+
+= 1.11.12 (2025/05/14) =
+
+Feature:
+* Super Page for Elementor
+* Update `readme.txt` file
 
 = 1.11.9 (2025/05/09) =
 
@@ -282,4 +288,4 @@ Fix: Escaping the output of plugin settings according to the requirements of wor
 * Fix: comments on the code sent by the plugin moderation team
 
 = 1.1.8 =
-* Publish content from SEOWriting to WordPress.
+* Publish content from SEO WRITING to WordPress.
