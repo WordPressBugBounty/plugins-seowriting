@@ -8,7 +8,7 @@
  * @wordpress-plugin
  * Plugin Name:       SEOWriting
  * Description:       SEOWriting - AI Writing Tool Plugin For Text Generation
- * Version:           1.12.3
+ * Version:           1.12.5
  * Author:            SEOWriting
  * Author URI:        https://seowriting.ai/?utm_source=wp_plugin
  * License:           GPL-2.0 or later
@@ -27,7 +27,7 @@ if (!class_exists('SEOWriting')) {
     {
         public $plugin_slug;
         public $plugin_path;
-        public $version = '1.12.3';
+        public $version = '1.12.5';
         /**
          * @var \SEOWriting\APIClient|null
          */
@@ -106,7 +106,6 @@ if (!class_exists('SEOWriting')) {
             add_filter('the_content', [$this, 'onContent'], 20);
             add_action("wp_head", [$this, 'printJSONLD'], 20);
 
-            add_action('transition_post_status', [$this, 'onChangePostStatus'], 10, 3);
             add_action('upgrader_process_complete', [$this, 'onUpdate'], 10, 2);
 
             add_action('requests-requests.before_parse', [$this, 'onAfterRequest'], 10, 6);
@@ -159,13 +158,14 @@ if (!class_exists('SEOWriting')) {
 
             $filename = $options['filename'];
             $tmpDir = sys_get_temp_dir() . '/' . uniqid('seowriting_');
-            mkdir($tmpDir);
+            $fs = seowriting_get_filesystem();
+            $fs->mkdir($tmpDir);
             $newDir = $tmpDir . '/' . $pluginName;
             $zip = new ZipArchive();
             if ($zip->open($filename)) {
                 $zip->extractTo($tmpDir);
                 $zip->close();
-                rename($tmpDir . '/seowriting/', $newDir);
+                $fs->move($tmpDir . '/seowriting/', $newDir);
                 $resultFile = $tmpDir . '/' . basename($filename);
                 $result = new ZipArchive();
                 if ($result->open($resultFile, ZipArchive::CREATE | ZipArchive::OVERWRITE)) {
@@ -176,41 +176,6 @@ if (!class_exists('SEOWriting')) {
                     seowriting_delete_dir($tmpDir);
                 }
             }
-        }
-
-        /**
-         * @param $new_status string
-         * @param $old_status string
-         * @param $post WP_Post
-         * @return bool
-         */
-        public function onChangePostStatus($new_status, $old_status, $post)
-        {
-            $status = '';
-            if (
-                ($old_status === 'auto-draft' && $new_status === 'publish')
-                || ($old_status === 'pending' && $new_status === 'publish')
-                || ($old_status === 'draft' && $new_status === 'publish')
-                || ($old_status === 'publish' && $new_status === 'publish')
-            ) {
-                $status = 'update';
-            } else if (
-                ($old_status === 'publish' && $new_status === 'pending')
-                || ($old_status === 'publish' && $new_status === 'draft')
-                || ($old_status === 'publish' && $new_status === 'trash')
-            ) {
-                $status = 'delete';
-            }
-            if ($status === '') {
-                return false;
-            }
-            $settings = $this->getSettings();
-            $this->getAPIClient()->changePostStatus($status, [
-                'post_id' => $post->ID,
-                'api_key' => isset($settings['api_key']) ? $settings['api_key'] : 'null',
-            ]);
-
-            return true;
         }
 
         /**
@@ -704,7 +669,7 @@ if (!class_exists('SEOWriting')) {
                 if (is_array($answers)) {
                     array_shift($answers);
                     foreach ($answers as $idx => $answer) {
-                        $answers[$idx] = trim(str_replace(PHP_EOL, "", strip_tags($answer)));
+                        $answers[$idx] = trim(str_replace(PHP_EOL, "", wp_strip_all_tags($answer)));
                     }
                 }
                 return [$questions, $answers, $title];
@@ -886,7 +851,7 @@ if (!class_exists('SEOWriting')) {
                 'post_title' => sanitize_text_field($data['theme']),
                 'post_content' => $content,
                 'post_status' => $post_status,
-                'post_date' => date('Y-m-d H:i:s', $post_time),
+                'post_date' => gmdate('Y-m-d H:i:s', $post_time),
                 'post_author' => $user_id,
                 'post_type' => $post_type,
                 'post_excerpt' => isset($data['excerpt']) && (int)$data['excerpt'] === 1
@@ -1192,7 +1157,7 @@ if (!class_exists('SEOWriting')) {
                     'source' => $s,
                 ];
             }
-            $s['now'] = date('Y-m-d H:i:s');
+            $s['now'] = gmdate('Y-m-d H:i:s');
             if (!file_exists($this->log_file)) {
                 @file_put_contents($this->log_file, "<?php die(); ?>\n\n");
             }
