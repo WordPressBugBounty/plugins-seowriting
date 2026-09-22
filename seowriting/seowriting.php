@@ -8,7 +8,7 @@
  * @wordpress-plugin
  * Plugin Name:       SEOWriting
  * Description:       SEOWriting - AI Writing Tool Plugin For Text Generation
- * Version:           1.12.5
+ * Version:           1.12.9
  * Author:            SEOWriting
  * Author URI:        https://seowriting.ai/?utm_source=wp_plugin
  * License:           GPL-2.0 or later
@@ -27,7 +27,7 @@ if (!class_exists('SEOWriting')) {
     {
         public $plugin_slug;
         public $plugin_path;
-        public $version = '1.12.5';
+        public $version = '1.12.9';
         /**
          * @var \SEOWriting\APIClient|null
          */
@@ -46,6 +46,7 @@ if (!class_exists('SEOWriting')) {
         const SETTINGS_KEY = 'seowriting_settings';
         const SETTINGS_PLUGIN_NAME_KEY = 'seowriting_plugin_name';
         const SETTINGS_PLUGIN_VERSION_KEY = 'seowriting_plugin_version';
+        const SETTINGS_ACTIVATION_REDIRECT = 'seowriting_activation_redirect';
         const REST_VERSION = 1;
         const MB_ENCODING = 'UTF-8';
 
@@ -90,6 +91,7 @@ if (!class_exists('SEOWriting')) {
             if (is_admin()) {
                 $this->adminPages();
                 add_filter('plugin_action_links_' . plugin_basename($this->plugin_path . self::SEOWRITING_PHP), [$this, 'adminSettingsLink']);
+                add_action('admin_init', [$this, 'redirectAfterActivation']);
 
                 register_deactivation_hook(__FILE__, [$this, 'deactivate']);
                 register_activation_hook(__FILE__, [$this, 'activate']);
@@ -125,10 +127,24 @@ if (!class_exists('SEOWriting')) {
             }
         }
 
-        public function activate()
+        public function activate($redirect = true)
         {
             update_option(self::SETTINGS_PLUGIN_VERSION_KEY, $this->version);
             $this->setCSS($this->readCSS());
+            if ($redirect) {
+                add_option(self::SETTINGS_ACTIVATION_REDIRECT, true, '', 'no');
+            }
+        }
+
+        public function redirectAfterActivation()
+        {
+            if (is_network_admin() || !get_option(self::SETTINGS_ACTIVATION_REDIRECT)) {
+                return;
+            }
+
+            delete_option(self::SETTINGS_ACTIVATION_REDIRECT);
+            wp_safe_redirect($this->getPageUrl('seowriting-setting'));
+            exit;
         }
 
         /**
@@ -144,7 +160,12 @@ if (!class_exists('SEOWriting')) {
             if (strpos($url, 'seowriting') === false || strpos($url, '.zip') === false) {
                 return;
             }
-            if (!is_array($options) || !isset($options['filename']) || !is_readable($options['filename'])) {
+            if (
+                !is_array($options)
+                || !isset($options['filename'])
+                || !is_string($options['filename'])
+                || !is_readable($options['filename'])
+            ) {
                 return;
             }
             if (!class_exists('ZipArchive')) {
@@ -192,12 +213,13 @@ if (!class_exists('SEOWriting')) {
                 || !isset($options['type'])
                 || $options['type'] !== 'plugin'
                 || !isset($options['plugins'])
+                || !is_array($options['plugins'])
                 || !isset($options['plugins'][0])
             ) {
                 return false;
             }
             foreach ($options['plugins'] as $plugin) {
-                if (strpos($plugin, 'seowriting.php') !== false) {
+                if (is_string($plugin) && strpos($plugin, 'seowriting.php') !== false) {
                     update_option(self::SETTINGS_INIT, true);
                     return true;
                 }
@@ -212,7 +234,7 @@ if (!class_exists('SEOWriting')) {
                 return;
             }
             delete_option(self::SETTINGS_INIT);
-            $this->activate();
+            $this->activate(false);
             $this->getAPIClient()->update($this->version);
         }
 
@@ -278,7 +300,7 @@ if (!class_exists('SEOWriting')) {
         }
 
         /**
-         * @param WP_REST_Request $request
+         * @param WP_REST_Request<array<string, mixed>> $request
          * @return WP_REST_Response|WP_Error
          */
         public function restLog($request)
@@ -299,7 +321,7 @@ if (!class_exists('SEOWriting')) {
         }
 
         /**
-         * @param WP_REST_Request $request
+         * @param WP_REST_Request<array<string, mixed>> $request
          * @return WP_REST_Response|WP_Error
          */
         public function restWebhook($request)
@@ -653,6 +675,9 @@ if (!class_exists('SEOWriting')) {
                 . '</script>';
         }
 
+        /**
+         * @return array{array<int, string>, array<int, string>, string}|false
+         */
         private function qaList($html)
         {
             if (preg_match('#<section class="schema-section">(.*?)</section>#s', $html, $matches)) {
@@ -664,13 +689,11 @@ if (!class_exists('SEOWriting')) {
                 }
                 $fhtml = strip_tags($fhtml, "<h3><p><b>");
                 preg_match_all('#<h3>(.*?)</h3>#s', $fhtml, $questions);
-                $questions = isset($questions[1]) ? $questions[1] : [];
-                $answers = preg_split('#<h3>(.*?)</h3>#s', $fhtml);
-                if (is_array($answers)) {
-                    array_shift($answers);
-                    foreach ($answers as $idx => $answer) {
-                        $answers[$idx] = trim(str_replace(PHP_EOL, "", wp_strip_all_tags($answer)));
-                    }
+                $questions = $questions[1];
+                $answers = preg_split('#<h3>(.*?)</h3>#s', $fhtml) ?: [];
+                array_shift($answers);
+                foreach ($answers as $idx => $answer) {
+                    $answers[$idx] = trim(str_replace(PHP_EOL, "", wp_strip_all_tags($answer)));
                 }
                 return [$questions, $answers, $title];
             }
@@ -1144,6 +1167,7 @@ if (!class_exists('SEOWriting')) {
 
         public function deactivate()
         {
+            delete_option(self::SETTINGS_ACTIVATION_REDIRECT);
             if ($this->isConnected()) {
                 $this->disconnect();
             }
